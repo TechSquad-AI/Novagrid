@@ -181,3 +181,59 @@ export const getDependencies = async (apiId) => {
     const response = await api.get(`/impact/${apiId}/dependencies`);
     return response.data;
 };
+
+// ============================================================
+// TABLES
+// ============================================================
+
+export const getApisTable = async () => {
+    const response = await api.get("/tables/apis");
+    return response.data;
+};
+
+export const getRepairsTable = async () => {
+    const response = await api.get("/tables/repairs");
+    return response.data;
+};
+
+export const getApprovalsTable = async () => {
+    const response = await api.get("/tables/approvals");
+    return response.data;
+};
+
+// ============================================================
+// BILLING
+// ============================================================
+
+export const getBillingInfo = async () => {
+    const response = await api.get("/billing");
+    return response.data;
+};
+
+export const getUsageHistory = async () => {
+    const response = await api.get("/billing/usage");
+    return response.data;
+};
+
+// ============================================================
+// PROFILE
+// ============================================================
+
+export const getProfile = async () => {
+    const response = await api.get("/profile");
+    return response.data;
+};
+
+export const getProfileActivity = async () => {
+    const response = await api.get("/profile/activity");
+    return response.data;
+};
+
+// ============================================================
+// DASHBOARD CHARTS
+// ============================================================
+
+export const getDashboardCharts = async () => {
+    const response = await api.get("/dashboard-charts");
+    return response.data;
+};

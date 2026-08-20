@@ -2,21 +2,22 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, LinearProgress, Alert, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import AddIcon from "@mui/icons-material/Add";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import WebIcon from "@mui/icons-material/Web";
 import Sidebar from "../components/Sidebar";
-import { useSidebar } from "../context/SidebarContext";
 import Navbar from "../components/Navbar";
-import { getDashboardStats, getDashboardMonitoring, getDashboardChanges, getDashboardInsights, registerAPI, checkAPIHealth, getAllAPIs } from "../api/services";
+import { getDashboardStats, getDashboardMonitoring, getDashboardChanges, getDashboardInsights, getDashboardCharts, registerAPI, checkAPIHealth } from "../api/services";
+
+function StatusDot({ ok }) {
+    return <FiberManualRecordIcon sx={{ fontSize: 8, color: ok ? "#10b981" : "#ef4444" }} />;
+}
 
 function Dashboard() {
-    const { open: sidebarOpen } = useSidebar();
-    const sidebarMargin = sidebarOpen ? "250px" : "0px";
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total_apis: 0, healthy_apis: 0, changed_apis: 0, critical_apis: 0 });
@@ -32,34 +33,12 @@ function Dashboard() {
     const loadDashboard = async () => {
         setLoading(true);
         try {
-            // Load stats
-            const s = await getDashboardStats().catch(() => ({}));
-            setStats(s);
-
-            // Load monitoring - try dashboard endpoint first, fallback to getAllAPIs
-            let monData = [];
-            try {
-                const m = await getDashboardMonitoring();
-                monData = m.monitoring || [];
-            } catch {}
-            if (monData.length === 0) {
-                try {
-                    const all = await getAllAPIs();
-                    monData = (all.data || []).map(a => ({
-                        id: a.id, name: a.name, url: a.base_url,
-                        status: "unchecked", response_time_ms: 0,
-                        http_status: 0, last_checked: "Never"
-                    }));
-                } catch {}
-            }
-            setMonitoring(monData);
-
-            // Load changes and insights
-            const c = await getDashboardChanges().catch(() => ({}));
-            setChanges(c.changes || []);
-            const i = await getDashboardInsights().catch(() => ({}));
-            setInsights(i);
-        } catch (e) { console.error("Dashboard load error:", e); }
+            const [s, m, c, i] = await Promise.allSettled([getDashboardStats(), getDashboardMonitoring(), getDashboardChanges(), getDashboardInsights()]);
+            if (s.status === "fulfilled") setStats(s.value);
+            if (m.status === "fulfilled") setMonitoring(m.value.monitoring || []);
+            if (c.status === "fulfilled") setChanges(c.value.changes || []);
+            if (i.status === "fulfilled") setInsights(i.value);
+        } catch (e) { console.error(e); }
         setLoading(false);
     };
 
@@ -67,14 +46,12 @@ function Dashboard() {
         if (!searchQuery) return;
         setScanLoading(true);
         try {
-            // Extract a readable name from the URL
-            const apiName = searchQuery.replace(/^https?:\/\//, "").split("/")[0].split(".")[0] || searchQuery;
-            const created = await registerAPI(apiName, searchQuery);
+            const created = await registerAPI("Analyzed API", searchQuery);
             if (created.status !== "error" && created.api) {
                 const health = await checkAPIHealth(created.api.id);
                 setScanResult(health);
-                await loadDashboard();
-                setSearchQuery("");
+                loadDashboard();
+                setTimeout(() => navigate("/analyze-api"), 1000);
             }
         } catch (e) { setScanResult({ status: "error", error: e.message }); }
         setScanLoading(false);
@@ -85,16 +62,16 @@ function Dashboard() {
     const criticalPct = stats.total_apis ? Math.round((stats.critical_apis / stats.total_apis) * 100) : 0;
 
     const kpiCards = [
-        { label: "Total APIs", value: stats.total_apis, sub: `${stats.total_apis} this week`, color: "#1a73e8", icon: "📊", trend: "up" },
-        { label: "Healthy APIs", value: stats.healthy_apis, sub: `${healthyPct}%`, color: "#0d9488", icon: "✅", trend: "up" },
-        { label: "Changed APIs", value: stats.changed_apis, sub: `${changedPct}%`, color: "#ea580c", icon: "🔄", trend: "up" },
-        { label: "Critical APIs", value: stats.critical_apis, sub: stats.critical_apis === 0 ? "No change" : `${criticalPct}%`, color: "#dc2626", icon: "⚠️", trend: "stable" },
+        { label: "Total APIs", value: stats.total_apis, sub: `${stats.total_apis} this week`, color: "#1a73e8", icon: <WebIcon />, trend: "up" },
+        { label: "Healthy APIs", value: stats.healthy_apis, sub: `${healthyPct}%`, color: "#0d9488", icon: <CheckCircleIcon />, trend: "up" },
+        { label: "Changed APIs", value: stats.changed_apis, sub: `${changedPct}%`, color: "#ea580c", icon: <WarningAmberIcon />, trend: "up" },
+        { label: "Critical APIs", value: stats.critical_apis, sub: stats.critical_apis === 0 ? "No change" : `${criticalPct}%`, color: "#dc2626", icon: <ErrorOutlineIcon />, trend: "stable" },
     ];
 
     return (
-        <Box sx={{ display: "flex", height: "100vh", overflowY: "auto", background: "#f8f9fb" }}>
+        <Box sx={{ display: "flex", minHeight: "100vh", background: "#f0f2f5" }}>
             <Sidebar />
-            <Box component="main" sx={{ flexGrow: 1, ml: sidebarMargin, p: 3, position: "relative", zIndex: 1 }}>
+            <Box component="main" sx={{ flexGrow: 1, ml: "230px", p: 3, position: "relative", zIndex: 1 }}>
                 <Navbar subtitle="Welcome back, TechSquad-AI 👋" />
 
                 {/* Search Bar */}
@@ -126,8 +103,8 @@ function Dashboard() {
                     {kpiCards.map((kpi, i) => (
                         <Box key={i} sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", transition: "box-shadow 0.2s", "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" } }}>
                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1.5 }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: 2.5, background: `${kpi.color}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                                    {kpi.icon}
+                                <Box sx={{ width: 40, height: 40, borderRadius: 2.5, background: `${kpi.color}10`, display: "flex", alignItems: "center", justifyContent: "center", color: kpi.color }}>
+                                    {React.cloneElement(kpi.icon, { fontSize: "small" })}
                                 </Box>
                                 <Typography sx={{ color: "#6b7280", fontSize: 13, fontWeight: 500 }}>{kpi.label}</Typography>
                             </Box>
@@ -143,24 +120,24 @@ function Dashboard() {
                 <Box sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", mb: 3 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1a1f36" }}>Recently Viewed APIs</Typography>
-                        <Button size="small" onClick={() => navigate("/all-apis")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13 }}>View All</Button>
+                        <Button size="small" onClick={() => navigate("/tables")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13 }}>View All</Button>
                     </Box>
                     <Box sx={{ display: "flex", gap: 1.5, overflowX: "auto", pb: 0.5 }}>
-                        {monitoring.slice(0, 6).map((m, i) => (
-                            <Box key={i} sx={{ minWidth: 160, flex: "0 0 auto", p: 1.5, borderRadius: 2, border: "1px solid #e5e7eb", cursor: "pointer", "&:hover": { borderColor: "#1a73e8", boxShadow: "0 2px 8px rgba(26,115,232,0.1)" }, transition: "all 0.15s" }}
+                        {monitoring.slice(0, 5).map((m, i) => (
+                            <Box key={i} sx={{ minWidth: 160, flex: "0 0 auto", p: 1.5, borderRadius: 2, border: "1px solid #e5e7eb", cursor: "pointer", "&:hover": { borderColor: "#1a73e8" }, transition: "border-color 0.15s" }}
                                 onClick={() => navigate("/analyze-api")}>
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                                     <Typography sx={{ color: "#1a1f36", fontSize: 14, fontWeight: 600 }}>{m.name}</Typography>
                                     <Chip size="small" label="GET" sx={{ fontSize: 10, height: 20, background: "rgba(13,148,136,0.1)", color: "#0d9488", fontWeight: 700 }} />
                                 </Box>
                                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "200 OK" : m.status === "unchecked" ? "Not scanned" : m.status}</Typography>
-                                    <Typography sx={{ color: "#9ca3af", fontSize: 11 }}>{m.last_checked && m.last_checked !== "Never" ? "Scanned" : "New"}</Typography>
+                                    <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "200 OK" : m.status}</Typography>
+                                    <Typography sx={{ color: "#9ca3af", fontSize: 11 }}>2 min ago</Typography>
                                 </Box>
                             </Box>
                         ))}
                         {monitoring.length === 0 && (
-                            <Typography sx={{ color: "#9ca3af", fontSize: 13, py: 2 }}>No APIs registered yet. Click "+ New Scan" to add one.</Typography>
+                            <Typography sx={{ color: "#9ca3af", fontSize: 13, py: 2 }}>No recently viewed APIs.</Typography>
                         )}
                     </Box>
                 </Box>
@@ -177,7 +154,6 @@ function Dashboard() {
                                     <Typography sx={{ color: "#10b981", fontSize: 11, fontWeight: 600 }}>Live</Typography>
                                 </Box>
                             </Box>
-                            <Button size="small" onClick={() => loadDashboard()} sx={{ color: "#1a73e8", textTransform: "none", fontSize: 12 }}>Refresh</Button>
                         </Box>
                         <TableContainer>
                             <Table size="small">
@@ -190,8 +166,8 @@ function Dashboard() {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {monitoring.slice(0, 8).map((m, i) => (
-                                        <TableRow key={i} sx={{ "&:hover": { background: "#f9fafb" }, cursor: "pointer" }} onClick={() => navigate("/analyze-api")}>
+                                    {monitoring.slice(0, 5).map((m, i) => (
+                                        <TableRow key={i} sx={{ "&:hover": { background: "#f9fafb" } }}>
                                             <TableCell>
                                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                                     <Typography sx={{ fontWeight: 500, fontSize: 13 }}>{m.name}</Typography>
@@ -200,24 +176,24 @@ function Dashboard() {
                                             </TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                    <FiberManualRecordIcon sx={{ fontSize: 8, color: m.status === "healthy" ? "#10b981" : m.status === "unchecked" ? "#f59e0b" : "#ef4444" }} />
-                                                    <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : m.status === "unchecked" ? "#f59e0b" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "200 OK" : m.status === "unchecked" ? "Not scanned" : m.status}</Typography>
+                                                    <StatusDot ok={m.status === "healthy"} />
+                                                    <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "200 OK" : m.status}</Typography>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ fontSize: 13 }}>{m.response_time_ms > 0 ? `${m.response_time_ms}ms` : "—"}</TableCell>
+                                            <TableCell sx={{ fontSize: 13 }}>{m.response_time_ms}ms</TableCell>
                                             <TableCell>
                                                 <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "99.9%" : "—"}</Typography>
                                             </TableCell>
                                         </TableRow>
                                     ))}
                                     {monitoring.length === 0 && (
-                                        <TableRow><TableCell colSpan={4} sx={{ textAlign: "center", py: 4, color: "#9ca3af" }}>No APIs registered yet.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={4} sx={{ textAlign: "center", py: 4, color: "#9ca3af" }}>No monitoring data.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
                         </TableContainer>
                         <Box sx={{ px: 2.5, pb: 1.5, pt: 0.5 }}>
-                            <Button size="small" sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13, textTransform: "none" }} onClick={() => navigate("/live-monitoring")}>
+                            <Button size="small" sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13, textTransform: "none" }} onClick={() => navigate("/tables")}>
                                 View Live Monitoring <ArrowForwardIcon sx={{ fontSize: 14, ml: 0.5 }} />
                             </Button>
                         </Box>
@@ -227,7 +203,7 @@ function Dashboard() {
                     <Box sx={{ background: "#fff", borderRadius: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
                         <Box sx={{ px: 2.5, pt: 2, pb: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1a1f36" }}>Recent Changes</Typography>
-                            <Button size="small" onClick={() => navigate("/api-changes")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13 }}>View All</Button>
+                            <Button size="small" sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13 }}>View All</Button>
                         </Box>
                         <Box sx={{ px: 2.5, pb: 2 }}>
                             {changes.length === 0 ? (
@@ -235,7 +211,6 @@ function Dashboard() {
                             ) : changes.slice(0, 4).map((c, i) => (
                                 <Box key={i} sx={{ py: 1.5, borderBottom: i < changes.length - 1 ? "1px solid #f3f4f6" : "none" }}>
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                                        <FiberManualRecordIcon sx={{ fontSize: 8, color: c.severity === "high" ? "#dc2626" : c.severity === "medium" ? "#ea580c" : "#0d9488" }} />
                                         <Chip size="small" label={c.severity || "info"} sx={{
                                             fontSize: 10, height: 20, fontWeight: 700,
                                             background: c.severity === "high" ? "rgba(220,38,38,0.08)" : c.severity === "medium" ? "rgba(234,88,12,0.08)" : "rgba(13,148,136,0.08)",
@@ -256,7 +231,7 @@ function Dashboard() {
                     <Box sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                             <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1a1f36" }}>Recent Alerts</Typography>
-                            <Button size="small" onClick={() => navigate("/api-changes")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 12 }}>View All</Button>
+                            <Button size="small" sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 12 }}>View All</Button>
                         </Box>
                         {[
                             { icon: <ErrorOutlineIcon sx={{ fontSize: 14, color: "#dc2626" }} />, text: "Breaking change detected in /users", sub: "Response schema changed", time: "2h ago" },
@@ -323,4 +298,6 @@ function Dashboard() {
         </Box>
     );
 }
+
+import WebIcon from "@mui/icons-material/Web";
 export default Dashboard;
