@@ -1,7 +1,0 @@
-{
-    "GET /": {
-        "response": {
-            "status": "string"
-        }
-    }
-}

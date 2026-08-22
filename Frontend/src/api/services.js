@@ -1,239 +1,189 @@
 import api from "./axios";
 
 // ============================================================
-// API REGISTRATION
+// AUTH
 // ============================================================
 
-export const registerAPI = async (name, url) => {
-    const response = await api.post("/apis", { name, url });
+export const signup = async (email, password) => {
+    const response = await api.post("/auth/signup", { email, password });
     return response.data;
 };
 
-export const getAllAPIs = async () => {
-    const response = await api.get("/apis");
+export const login = async (email, password) => {
+    const response = await api.post("/auth/login", { email, password });
     return response.data;
 };
 
-// ============================================================
-// HEALTH CHECK
-// ============================================================
-
-export const checkAPIHealth = async (apiId) => {
-    const response = await api.get(`/health/${apiId}`);
+export const logout = async () => {
+    const response = await api.post("/auth/logout");
     return response.data;
 };
 
 // ============================================================
-// SCAN
+// ENDPOINT TREE
 // ============================================================
 
-export const scanAPI = async () => {
-    const response = await api.post("/scan");
+export const scanEndpoints = async () => {
+    const response = await api.get("/tree/scan");
     return response.data;
 };
 
-// ============================================================
-// HISTORY
-// ============================================================
-
-export const getScanHistory = async () => {
-    const response = await api.get("/history");
+export const scanAndStore = async () => {
+    const response = await api.post("/tree/scan-and-store");
     return response.data;
 };
 
-// ============================================================
-// REPAIRS
-// ============================================================
-
-export const getRepairs = async () => {
-    const response = await api.get("/repairs");
+export const getLatestManifest = async () => {
+    const response = await api.get("/tree/manifest");
     return response.data;
 };
 
-export const getRepair = async (repairId) => {
-    const response = await api.get(`/repairs/${repairId}`);
+export const listManifests = async () => {
+    const response = await api.get("/tree/manifests");
     return response.data;
 };
 
-export const repairAPI = async (apiId) => {
-    const response = await api.post(`/repair/${apiId}`);
+export const diffWithPrevious = async () => {
+    const response = await api.post("/tree/diff");
     return response.data;
 };
 
-// ============================================================
-// APPROVALS
-// ============================================================
-
-export const getPendingApprovals = async () => {
-    const response = await api.get("/approvals");
+export const validateEndpoints = async () => {
+    const response = await api.get("/tree/validate");
     return response.data;
 };
 
-export const approveRepair = async (approvalId) => {
-    const response = await api.post(`/approvals/${approvalId}/approve`);
+export const getChangeReports = async () => {
+    const response = await api.get("/tree/reports");
     return response.data;
 };
 
-export const rejectRepair = async (approvalId) => {
-    const response = await api.post(`/approvals/${approvalId}/reject`);
+export const getAllReports = async () => {
+    const response = await api.get("/tree/reports/all");
     return response.data;
 };
 
-// ============================================================
-// VERSION TRACKING
-// ============================================================
+export const approveChange = async (reportId) => {
+    const response = await api.post(`/tree/approve/${reportId}`);
+    return response.data;
+};
 
-export const createAPIVersion = async (apiId) => {
-    const response = await api.post(`/apis/${apiId}/version`);
+export const rejectChange = async (reportId) => {
+    const response = await api.post(`/tree/reject/${reportId}`);
+    return response.data;
+};
+
+export const getTreeData = async () => {
+    const response = await api.get("/tree/tree-data");
     return response.data;
 };
 
 // ============================================================
-// MONITORING
+// PUBLIC APIs
 // ============================================================
 
-export const monitorAPI = async (apiId) => {
-    const response = await api.post(`/apis/${apiId}/monitor`);
+export const registerPublicAPI = async (name, url, openapiUrl) => {
+    const response = await api.post("/public-apis/register", { name, url, openapi_url: openapiUrl });
     return response.data;
 };
 
-// ============================================================
-// STATUS
-// ============================================================
-
-export const getAPIStatus = async () => {
-    const response = await api.get("/status");
+export const listPublicAPIs = async () => {
+    const response = await api.get("/public-apis");
     return response.data;
 };
 
-// ============================================================
-// DASHBOARD
-// ============================================================
-
-export const getDashboardStats = async () => {
-    const response = await api.get("/dashboard/stats");
+export const getPublicAPI = async (apiId) => {
+    const response = await api.get(`/public-apis/${apiId}`);
     return response.data;
 };
 
-export const getDashboardChanges = async () => {
-    const response = await api.get("/dashboard/changes");
+export const getPublicAPITree = async (apiId) => {
+    const response = await api.get(`/public-apis/${apiId}/tree`);
     return response.data;
 };
 
-export const getDashboardMonitoring = async () => {
-    const response = await api.get("/dashboard/monitoring");
+export const checkPublicAPI = async (apiId) => {
+    const response = await api.post(`/public-apis/${apiId}/check`);
     return response.data;
 };
 
-export const getDashboardInsights = async () => {
-    const response = await api.get("/dashboard/insights");
+export const checkAllPublicAPIs = async () => {
+    const response = await api.post("/public-apis/check-all");
     return response.data;
 };
 
-// ============================================================
-// SETTINGS
-// ============================================================
-
-export const getSettings = async () => {
-    const response = await api.get("/settings");
+export const getPublicAPIChanges = async (apiId) => {
+    const response = await api.get(`/public-apis/${apiId}/changes`);
     return response.data;
 };
 
-export const updateSettings = async (data) => {
-    const response = await api.put("/settings", data);
+export const deletePublicAPI = async (apiId) => {
+    const response = await api.delete(`/public-apis/${apiId}`);
     return response.data;
 };
 
 // ============================================================
-// DETAILED HISTORY
+// ANALYZE / CHECK
 // ============================================================
 
-export const getDetailedHistory = async () => {
-    const response = await api.get("/history");
-    return response.data;
-};
-
-export const getHistoryVersions = async () => {
-    const response = await api.get("/history/versions");
-    return response.data;
-};
-
-export const getHistoryFixes = async () => {
-    const response = await api.get("/history/fixes");
-    return response.data;
-};
-
-export const getHistoryReviews = async () => {
-    const response = await api.get("/history/reviews");
+export const getPublicAPICheck = async (apiId) => {
+    const response = await api.post(`/public-apis/${apiId}/check`);
     return response.data;
 };
 
 // ============================================================
-// IMPACT ANALYSIS
+// AI FIX
 // ============================================================
 
-export const getImpactAnalysis = async (apiId) => {
-    const response = await api.get(`/impact/${apiId}`);
+export const runAiFix = async (apiName) => {
+    const response = await api.post("/ai-fix/run", { api_name: apiName });
     return response.data;
 };
 
-export const getDependencies = async (apiId) => {
-    const response = await api.get(`/impact/${apiId}/dependencies`);
+export const applyFix = async (fixId) => {
+    const response = await api.post(`/ai-fix/${fixId}/apply`);
     return response.data;
 };
 
-// ============================================================
-// TABLES
-// ============================================================
-
-export const getApisTable = async () => {
-    const response = await api.get("/tables/apis");
-    return response.data;
-};
-
-export const getRepairsTable = async () => {
-    const response = await api.get("/tables/repairs");
-    return response.data;
-};
-
-export const getApprovalsTable = async () => {
-    const response = await api.get("/tables/approvals");
+export const rejectFix = async (fixId) => {
+    const response = await api.post(`/ai-fix/${fixId}/reject`);
     return response.data;
 };
 
 // ============================================================
-// BILLING
+// BUG EXPLAINER
 // ============================================================
 
-export const getBillingInfo = async () => {
-    const response = await api.get("/billing");
-    return response.data;
-};
-
-export const getUsageHistory = async () => {
-    const response = await api.get("/billing/usage");
+export const analyzeLogs = async (logs) => {
+    const response = await api.post("/bug-explainer/analyze", { logs });
     return response.data;
 };
 
 // ============================================================
-// PROFILE
+// GITHUB REPOS
 // ============================================================
 
-export const getProfile = async () => {
-    const response = await api.get("/profile");
+export const registerGitHubRepo = async (name, repoUrl) => {
+    const response = await api.post("/github-repos/register", { name, repo_url: repoUrl });
     return response.data;
 };
 
-export const getProfileActivity = async () => {
-    const response = await api.get("/profile/activity");
+export const listGitHubRepos = async () => {
+    const response = await api.get("/github-repos");
     return response.data;
 };
 
-// ============================================================
-// DASHBOARD CHARTS
-// ============================================================
+export const getGitHubRepoTree = async (repoId) => {
+    const response = await api.get(`/github-repos/${repoId}/tree`);
+    return response.data;
+};
 
-export const getDashboardCharts = async () => {
-    const response = await api.get("/dashboard-charts");
+export const checkGitHubRepo = async (repoId) => {
+    const response = await api.post(`/github-repos/${repoId}/check`);
+    return response.data;
+};
+
+export const deleteGitHubRepo = async (repoId) => {
+    const response = await api.delete(`/github-repos/${repoId}`);
     return response.data;
 };

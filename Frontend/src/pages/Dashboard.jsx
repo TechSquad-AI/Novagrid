@@ -1,326 +1,124 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, LinearProgress, Alert, IconButton } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import AddIcon from "@mui/icons-material/Add";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlineOutlined";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import WebIcon from "@mui/icons-material/Web";
-import Sidebar from "../components/Sidebar";
-import { useSidebar } from "../context/SidebarContext";
-import Navbar from "../components/Navbar";
-import { getDashboardStats, getDashboardMonitoring, getDashboardChanges, getDashboardInsights, registerAPI, checkAPIHealth, getAllAPIs } from "../api/services";
+import {
+    Box, Typography, Card, CardContent, Chip, CircularProgress,
+    Alert, Button, Table, TableBody, TableCell, TableHead, TableRow,
+} from "@mui/material";
+import HubRoundedIcon from "@mui/icons-material/HubRounded";
+import DifferenceRoundedIcon from "@mui/icons-material/DifferenceRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import { getChangeReports } from "../api/services";
 
-function Dashboard() {
-    const { open: sidebarOpen } = useSidebar();
-    const sidebarMargin = sidebarOpen ? "250px" : "0px";
+const MC = { GET: "#10b981", POST: "#6366f1", PUT: "#f59e0b", PATCH: "#f59e0b", DELETE: "#ef4444" };
+
+export default function Dashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ total_apis: 0, healthy_apis: 0, changed_apis: 0, critical_apis: 0 });
-    const [monitoring, setMonitoring] = useState([]);
-    const [changes, setChanges] = useState([]);
-    const [insights, setInsights] = useState({ risk_summary: { high: 0, medium: 0, low: 0 }, narrative: "" });
-    const [searchQuery, setSearchQuery] = useState("");
-    const [scanLoading, setScanLoading] = useState(false);
-    const [scanResult, setScanResult] = useState(null);
+    const [reports, setReports] = useState(null);
+    const [error, setError] = useState(null);
 
-    useEffect(() => { loadDashboard(); }, []);
-
-    const loadDashboard = async () => {
-        setLoading(true);
-        try {
-            // Load stats
-            const s = await getDashboardStats().catch(() => ({}));
-            setStats(s);
-
-            // Load monitoring - try dashboard endpoint first, fallback to getAllAPIs
-            let monData = [];
+    useEffect(() => {
+        (async () => {
             try {
-                const m = await getDashboardMonitoring();
-                monData = m.monitoring || [];
-            } catch {}
-            if (monData.length === 0) {
-                try {
-                    const all = await getAllAPIs();
-                    monData = (all.data || []).map(a => ({
-                        id: a.id, name: a.name, url: a.base_url,
-                        status: "unchecked", response_time_ms: 0,
-                        http_status: 0, last_checked: "Never"
-                    }));
-                } catch {}
-            }
-            setMonitoring(monData);
+                const r = await getChangeReports();
+                setReports(r);
+            } catch { setError("Failed to load dashboard"); }
+            setLoading(false);
+        })();
+    }, []);
 
-            // Load changes and insights
-            const c = await getDashboardChanges().catch(() => ({}));
-            setChanges(c.changes || []);
-            const i = await getDashboardInsights().catch(() => ({}));
-            setInsights(i);
-        } catch (e) { console.error("Dashboard load error:", e); }
-        setLoading(false);
-    };
+    if (loading) return (
+        <Box sx={{ display: "flex", justifyContent: "center", pt: 16 }}>
+            <CircularProgress size={28} sx={{ color: "#6366f1" }} />
+        </Box>
+    );
 
-    const handleAnalyze = async () => {
-        if (!searchQuery) return;
-        setScanLoading(true);
-        try {
-            // Extract a readable name from the URL
-            const apiName = searchQuery.replace(/^https?:\/\//, "").split("/")[0].split(".")[0] || searchQuery;
-            const created = await registerAPI(apiName, searchQuery);
-            if (created.status !== "error" && created.api) {
-                const health = await checkAPIHealth(created.api.id);
-                setScanResult(health);
-                await loadDashboard();
-                setSearchQuery("");
-            }
-        } catch (e) { setScanResult({ status: "error", error: e.message }); }
-        setScanLoading(false);
-    };
+    const pending = reports?.reports || [];
+    const pendingCount = Array.isArray(pending) ? pending.length : 0;
 
-    const healthyPct = stats.total_apis ? Math.round((stats.healthy_apis / stats.total_apis) * 100) : 0;
-    const changedPct = stats.total_apis ? Math.round((stats.changed_apis / stats.total_apis) * 100) : 0;
-    const criticalPct = stats.total_apis ? Math.round((stats.critical_apis / stats.total_apis) * 100) : 0;
+    const kpis = [
+        { label: "Monitored APIs", value: 1, color: "#10b981" },
+        { label: "Changes Detected", value: pendingCount, color: pendingCount > 0 ? "#ef4444" : "#10b981" },
+        { label: "Pending Review", value: pendingCount, color: pendingCount > 0 ? "#f59e0b" : "#10b981" },
+    ];
 
-    const kpiCards = [
-        { label: "Total APIs", value: stats.total_apis, sub: `${stats.total_apis} this week`, color: "#1a73e8", icon: "📊", trend: "up" },
-        { label: "Healthy APIs", value: stats.healthy_apis, sub: `${healthyPct}%`, color: "#0d9488", icon: "✅", trend: "up" },
-        { label: "Changed APIs", value: stats.changed_apis, sub: `${changedPct}%`, color: "#ea580c", icon: "🔄", trend: "up" },
-        { label: "Critical APIs", value: stats.critical_apis, sub: stats.critical_apis === 0 ? "No change" : `${criticalPct}%`, color: "#dc2626", icon: "⚠️", trend: "stable" },
+    const quickActions = [
+        { label: "Public APIs", desc: "Register and monitor OpenAPI specs", path: "/public-apis", color: "#10b981", icon: <HubRoundedIcon /> },
+        { label: "Impact Analysis", desc: "Detect breaking changes", path: "/impact", color: "#f59e0b", icon: <DifferenceRoundedIcon /> },
+        { label: "Human Validation", desc: "Approve or reject changes", path: "/human-validation", color: "#8b5cf6", icon: <span style={{fontSize:18}}>\u2714</span> },
+        { label: "History", desc: "View audit trail of changes", path: "/history", color: "#64748b", icon: <HistoryRoundedIcon /> },
     ];
 
     return (
-        <Box sx={{ display: "flex", height: "100vh", overflowY: "auto", background: "#f8f9fb" }}>
-            <Sidebar />
-            <Box component="main" sx={{ flexGrow: 1, ml: sidebarMargin, p: 3, position: "relative", zIndex: 1 }}>
-                <Navbar subtitle="Welcome back, TechSquad-AI 👋" />
+        <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+            {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
-                {/* Search Bar */}
-                <Box sx={{ display: "flex", gap: 1.5, mb: 3, background: "#fff", borderRadius: 2, p: 1.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1 }}>
-                        <SearchIcon sx={{ color: "#9ca3af" }} />
-                        <input
-                            placeholder="Search by API name, endpoint or URL (e.g. payment, /users, https://api.example.com/users)"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && handleAnalyze()}
-                            style={{ flex: 1, border: "none", outline: "none", fontSize: 14, color: "#1a1f36", background: "transparent" }}
-                        />
-                    </Box>
-                    <Button variant="contained" onClick={handleAnalyze} disabled={scanLoading || !searchQuery} sx={{ px: 3, borderRadius: 2 }}>Analyze API</Button>
-                    <Button variant="outlined" onClick={() => navigate("/analyze-api")} sx={{ px: 3, borderRadius: 2, borderColor: "#1a73e8", color: "#1a73e8" }}>+ New Scan</Button>
+            {/* Header */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Box>
+                    <Typography sx={{ fontWeight: 800, fontSize: 22, color: "#0f172a" }}>Dashboard</Typography>
+                    <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.3 }}>
+                        NovaGrid API Guardian — Overview of your API monitoring
+                    </Typography>
                 </Box>
+            </Box>
 
-                {scanResult && (
-                    <Alert severity={scanResult.status === "success" ? "success" : "error"} sx={{ mb: 2 }} onClose={() => setScanResult(null)}>
-                        {scanResult.status === "success" ? `Healthy — ${scanResult.health?.response_time_ms}ms` : `Error: ${scanResult.error || scanResult.status}`}
-                    </Alert>
-                )}
+            {/* KPI Cards */}
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)", md: "repeat(7, 1fr)" }, gap: 1.5, mb: 4 }}>
+                {kpis.map((k) => (
+                    <Card key={k.label} sx={{ p: 2, textAlign: "center", borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                        <Typography sx={{ fontSize: 28, fontWeight: 800, color: k.color, lineHeight: 1.1 }}>{k.value}</Typography>
+                        <Typography sx={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, mt: 0.5, textTransform: "uppercase", letterSpacing: 0.3 }}>{k.label}</Typography>
+                    </Card>
+                ))}
+            </Box>
 
-                {loading && <LinearProgress sx={{ mb: 2 }} />}
-
-                {/* KPI Cards */}
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 3 }}>
-                    {kpiCards.map((kpi, i) => (
-                        <Box key={i} sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", transition: "box-shadow 0.2s", "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" } }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1.5 }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: 2.5, background: `${kpi.color}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                                    {kpi.icon}
-                                </Box>
-                                <Typography sx={{ color: "#6b7280", fontSize: 13, fontWeight: 500 }}>{kpi.label}</Typography>
+            {/* Quick Actions */}
+            <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#0f172a", mb: 1.5 }}>Quick Actions</Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 1.5, mb: 4 }}>
+                {quickActions.map((a) => (
+                    <Card key={a.label}
+                        onClick={() => navigate(a.path)}
+                        sx={{
+                            p: 2, borderRadius: 2, border: "1px solid #e2e8f0", cursor: "pointer",
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            transition: "all 0.15s",
+                            "&:hover": { borderColor: a.color, boxShadow: `0 0 0 1px ${a.color}20`, transform: "translateY(-1px)" },
+                        }}
+                    >
+                        <Box>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
+                                <Box sx={{ color: a.color, display: "flex" }}>{a.icon}</Box>
+                                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{a.label}</Typography>
                             </Box>
-                            <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-                                <Typography sx={{ color: "#1a1f36", fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{kpi.value}</Typography>
-                                <Typography sx={{ color: kpi.trend === "up" ? "#0d9488" : "#6b7280", fontSize: 13, fontWeight: 600 }}>{kpi.sub}</Typography>
-                            </Box>
+                            <Typography sx={{ fontSize: 11, color: "#94a3b8" }}>{a.desc}</Typography>
                         </Box>
-                    ))}
-                </Box>
+                        <ArrowForwardRoundedIcon sx={{ fontSize: 18, color: "#d1d5db" }} />
+                    </Card>
+                ))}
+            </Box>
 
-                {/* Recently Viewed APIs */}
-                <Box sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", mb: 3 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1a1f36" }}>Recently Viewed APIs</Typography>
-                        <Button size="small" onClick={() => navigate("/all-apis")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13 }}>View All</Button>
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1.5, overflowX: "auto", pb: 0.5 }}>
-                        {monitoring.slice(0, 6).map((m, i) => (
-                            <Box key={i} sx={{ minWidth: 160, flex: "0 0 auto", p: 1.5, borderRadius: 2, border: "1px solid #e5e7eb", cursor: "pointer", "&:hover": { borderColor: "#1a73e8", boxShadow: "0 2px 8px rgba(26,115,232,0.1)" }, transition: "all 0.15s" }}
-                                onClick={() => navigate("/analyze-api")}>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                                    <Typography sx={{ color: "#1a1f36", fontSize: 14, fontWeight: 600 }}>{m.name}</Typography>
-                                    <Chip size="small" label="GET" sx={{ fontSize: 10, height: 20, background: "rgba(13,148,136,0.1)", color: "#0d9488", fontWeight: 700 }} />
-                                </Box>
-                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "200 OK" : m.status === "unchecked" ? "Not scanned" : m.status}</Typography>
-                                    <Typography sx={{ color: "#9ca3af", fontSize: 11 }}>{m.last_checked && m.last_checked !== "Never" ? "Scanned" : "New"}</Typography>
-                                </Box>
-                            </Box>
-                        ))}
-                        {monitoring.length === 0 && (
-                            <Typography sx={{ color: "#9ca3af", fontSize: 13, py: 2 }}>No APIs registered yet. Click "+ New Scan" to add one.</Typography>
-                        )}
-                    </Box>
-                </Box>
-
-                {/* Live Monitoring + Recent Changes */}
-                <Box sx={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 2, mb: 3 }}>
-                    {/* Live Monitoring */}
-                    <Box sx={{ background: "#fff", borderRadius: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
-                        <Box sx={{ px: 2.5, pt: 2, pb: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1a1f36" }}>Live Monitoring</Typography>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1, py: 0.2, borderRadius: 1, background: "rgba(16,185,129,0.08)" }}>
-                                    <FiberManualRecordIcon sx={{ fontSize: 6, color: "#10b981", animation: "pulse 2s infinite", "@keyframes pulse": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.3 } } }} />
-                                    <Typography sx={{ color: "#10b981", fontSize: 11, fontWeight: 600 }}>Live</Typography>
-                                </Box>
-                            </Box>
-                            <Button size="small" onClick={() => loadDashboard()} sx={{ color: "#1a73e8", textTransform: "none", fontSize: 12 }}>Refresh</Button>
+            {/* System Status */}
+            <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#0f172a", mb: 1.5 }}>System Status</Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 1.5 }}>
+                {[
+                    { label: "Backend API", status: "Running", ok: true },
+                    { label: "Database", status: "Connected", ok: true },
+                    { label: "viaSocket", status: "Active", ok: true },
+                ].map((s) => (
+                    <Card key={s.label} sx={{ p: 2, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{s.label}</Typography>
+                            <Chip size="small" label={s.status} sx={{
+                                fontSize: 9, height: 18, fontWeight: 700,
+                                background: s.ok ? "#ecfdf5" : "#fef2f2",
+                                color: s.ok ? "#059669" : "#dc2626",
+                            }} />
                         </Box>
-                        <TableContainer>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>API / Endpoint</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell>Response Time</TableCell>
-                                        <TableCell>Uptime</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {monitoring.slice(0, 8).map((m, i) => (
-                                        <TableRow key={i} sx={{ "&:hover": { background: "#f9fafb" }, cursor: "pointer" }} onClick={() => navigate("/analyze-api")}>
-                                            <TableCell>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                    <Typography sx={{ fontWeight: 500, fontSize: 13 }}>{m.name}</Typography>
-                                                    <Chip size="small" label="GET" sx={{ fontSize: 10, height: 18, background: "rgba(13,148,136,0.1)", color: "#0d9488", fontWeight: 700 }} />
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                    <FiberManualRecordIcon sx={{ fontSize: 8, color: m.status === "healthy" ? "#10b981" : m.status === "unchecked" ? "#f59e0b" : "#ef4444" }} />
-                                                    <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : m.status === "unchecked" ? "#f59e0b" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "200 OK" : m.status === "unchecked" ? "Not scanned" : m.status}</Typography>
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell sx={{ fontSize: 13 }}>{m.response_time_ms > 0 ? `${m.response_time_ms}ms` : "—"}</TableCell>
-                                            <TableCell>
-                                                <Typography sx={{ color: m.status === "healthy" ? "#0d9488" : "#dc2626", fontSize: 12, fontWeight: 600 }}>{m.status === "healthy" ? "99.9%" : "—"}</Typography>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {monitoring.length === 0 && (
-                                        <TableRow><TableCell colSpan={4} sx={{ textAlign: "center", py: 4, color: "#9ca3af" }}>No APIs registered yet.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                        <Box sx={{ px: 2.5, pb: 1.5, pt: 0.5 }}>
-                            <Button size="small" sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13, textTransform: "none" }} onClick={() => navigate("/live-monitoring")}>
-                                View Live Monitoring <ArrowForwardIcon sx={{ fontSize: 14, ml: 0.5 }} />
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    {/* Recent Changes */}
-                    <Box sx={{ background: "#fff", borderRadius: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
-                        <Box sx={{ px: 2.5, pt: 2, pb: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1a1f36" }}>Recent Changes</Typography>
-                            <Button size="small" onClick={() => navigate("/api-changes")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 13 }}>View All</Button>
-                        </Box>
-                        <Box sx={{ px: 2.5, pb: 2 }}>
-                            {changes.length === 0 ? (
-                                <Typography sx={{ color: "#9ca3af", fontSize: 13, py: 3, textAlign: "center" }}>No recent changes.</Typography>
-                            ) : changes.slice(0, 4).map((c, i) => (
-                                <Box key={i} sx={{ py: 1.5, borderBottom: i < changes.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                                        <FiberManualRecordIcon sx={{ fontSize: 8, color: c.severity === "high" ? "#dc2626" : c.severity === "medium" ? "#ea580c" : "#0d9488" }} />
-                                        <Chip size="small" label={c.severity || "info"} sx={{
-                                            fontSize: 10, height: 20, fontWeight: 700,
-                                            background: c.severity === "high" ? "rgba(220,38,38,0.08)" : c.severity === "medium" ? "rgba(234,88,12,0.08)" : "rgba(13,148,136,0.08)",
-                                            color: c.severity === "high" ? "#dc2626" : c.severity === "medium" ? "#ea580c" : "#0d9488",
-                                        }} />
-                                        <Typography sx={{ color: "#1a1f36", fontSize: 13, fontWeight: 500 }}>{c.description || c.api_change || "API change"}</Typography>
-                                    </Box>
-                                    <Typography sx={{ color: "#9ca3af", fontSize: 12 }}>{c.detail || ""}</Typography>
-                                </Box>
-                            ))}
-                        </Box>
-                    </Box>
-                </Box>
-
-                {/* Alerts + Risk + AI */}
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, mb: 3 }}>
-                    {/* Recent Alerts */}
-                    <Box sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                            <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1a1f36" }}>Recent Alerts</Typography>
-                            <Button size="small" onClick={() => navigate("/api-changes")} sx={{ color: "#1a73e8", fontWeight: 600, fontSize: 12 }}>View All</Button>
-                        </Box>
-                        {[
-                            { icon: <ErrorOutlineIcon sx={{ fontSize: 14, color: "#dc2626" }} />, text: "Breaking change detected in /users", sub: "Response schema changed", time: "2h ago" },
-                            { icon: <WarningAmberIcon sx={{ fontSize: 14, color: "#ea580c" }} />, text: "Modified API /payment", sub: "Request body structure changed", time: "5h ago" },
-                            { icon: <WarningAmberIcon sx={{ fontSize: 14, color: "#ea580c" }} />, text: "High response time for /order", sub: "Response time is above 3s", time: "10h ago" },
-                        ].map((a, i) => (
-                            <Box key={i} sx={{ display: "flex", gap: 1, py: 1, borderBottom: i < 2 ? "1px solid #f3f4f6" : "none" }}>
-                                {a.icon}
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography sx={{ color: "#1a1f36", fontSize: 12, fontWeight: 500 }}>{a.text}</Typography>
-                                    <Typography sx={{ color: "#9ca3af", fontSize: 11 }}>{a.sub}</Typography>
-                                </Box>
-                                <Typography sx={{ color: "#9ca3af", fontSize: 11, whiteSpace: "nowrap" }}>{a.time}</Typography>
-                            </Box>
-                        ))}
-                    </Box>
-
-                    {/* Risk Summary */}
-                    <Box sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1a1f36", mb: 2 }}>Risk Summary</Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <Box sx={{ position: "relative", width: 100, height: 100 }}>
-                                <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="10" />
-                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#0d9488" strokeWidth="10" strokeDasharray={`${(stats.healthy_apis / Math.max(stats.total_apis, 1)) * 251} 251`} strokeLinecap="round" />
-                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#ea580c" strokeWidth="10" strokeDasharray={`${(stats.changed_apis / Math.max(stats.total_apis, 1)) * 251} 251`} strokeDashoffset={`-${(stats.healthy_apis / Math.max(stats.total_apis, 1)) * 251}`} strokeLinecap="round" />
-                                </svg>
-                                <Box sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center" }}>
-                                    <Typography sx={{ fontSize: 18, fontWeight: 800, color: "#1a1f36" }}>{stats.total_apis}</Typography>
-                                    <Typography sx={{ fontSize: 10, color: "#9ca3af" }}>APIs</Typography>
-                                </Box>
-                            </Box>
-                            <Box>
-                                {[{ label: "High Risk", count: insights.risk_summary?.high || 0, color: "#dc2626", pct: stats.total_apis ? Math.round((insights.risk_summary?.high || 0) / stats.total_apis * 100) : 0 },
-                                { label: "Medium Risk", count: insights.risk_summary?.medium || 0, color: "#ea580c", pct: stats.total_apis ? Math.round((insights.risk_summary?.medium || 0) / stats.total_apis * 100) : 0 },
-                                { label: "Low Risk", count: insights.risk_summary?.low || 0, color: "#0d9488", pct: stats.total_apis ? Math.round((insights.risk_summary?.low || 0) / stats.total_apis * 100) : 0 },
-                                ].map((r, i) => (
-                                    <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                                        <FiberManualRecordIcon sx={{ fontSize: 8, color: r.color }} />
-                                        <Typography sx={{ color: "#6b7280", fontSize: 12, flex: 1 }}>{r.label}</Typography>
-                                        <Typography sx={{ color: "#1a1f36", fontSize: 12, fontWeight: 600 }}>{r.count}</Typography>
-                                        <Typography sx={{ color: "#9ca3af", fontSize: 11 }}>({r.pct}%)</Typography>
-                                    </Box>
-                                ))}
-                            </Box>
-                        </Box>
-                    </Box>
-
-                    {/* AI Insight */}
-                    <Box sx={{ background: "#fff", borderRadius: 2.5, p: 2.5, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1a1f36", mb: 1.5 }}>AI Insight</Typography>
-                        <Typography sx={{ color: "#374151", fontSize: 13, lineHeight: 1.7, mb: 2 }}>
-                            {insights.narrative || "No insights yet. Scan an API to get started."}
-                        </Typography>
-                        <Button variant="contained" size="small" onClick={() => navigate("/api-changes")} sx={{ borderRadius: 2 }}>
-                            View Impact Analysis
-                        </Button>
-                    </Box>
-                </Box>
-
-                {/* Footer */}
-                <Typography sx={{ color: "#9ca3af", fontSize: 12, textAlign: "center", py: 2 }}>NovaGrid API Guardian © 2025</Typography>
+                    </Card>
+                ))}
             </Box>
         </Box>
     );
 }
-export default Dashboard;

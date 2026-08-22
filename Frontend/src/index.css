@@ -1,57 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    min-height: 100vh;
+html, body, #root {
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f4f7fe;
+    color: #0f172a;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-    background: #f8f9fb;
-    color: #1a1f36;
 }
 
-#root { width: 100%; height: 100vh; position: relative; overflow: hidden; }
-
-/* Blue aurora glow only for dark mode */
-body.dark-mode #root::before {
-    content: '';
-    position: fixed;
-    top: -30%;
-    right: -20%;
-    width: 70%;
-    height: 70%;
-    background: radial-gradient(ellipse, rgba(67,24,255,0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-body.dark-mode #root::after {
-    content: '';
-    position: fixed;
-    bottom: -20%;
-    left: -10%;
-    width: 50%;
-    height: 50%;
-    background: radial-gradient(ellipse, rgba(117,81,255,0.05) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
 
-/* Ensure all inputs have visible text */
 input, textarea, select {
-    color: #1a1f36 !important;
-    background-color: transparent;
-}
-
-input::placeholder {
-    color: #9ca3af !important;
-}
-
-input:focus, textarea:focus, select:focus {
-    outline: none;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

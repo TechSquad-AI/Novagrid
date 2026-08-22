@@ -1,173 +1,197 @@
-import React, { useState, useEffect } from "react";
-import { Box, Typography, Chip, Button, Alert, TextField, Divider } from "@mui/material";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
-import EditIcon from "@mui/icons-material/Edit";
-import Sidebar from "../components/Sidebar";
-import { useSidebar } from "../context/SidebarContext";
-import Navbar from "../components/Navbar";
-import { getPendingApprovals, approveRepair, rejectRepair } from "../api/services";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+    Box, Typography, Card, CardContent, Button, Chip, CircularProgress,
+    Alert, Table, TableBody, TableCell, TableHead, TableRow, TableContainer,
+    Tabs, Tab, TextField, Snackbar,
+} from "@mui/material";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
+import HourglassTopRoundedIcon from "@mui/icons-material/HourglassTopRounded";
+import { getChangeReports, approveChange, rejectChange } from "../api/services";
 
-function HumanValidation() {
-    const { open: sidebarOpen } = useSidebar();
-    const sidebarMargin = sidebarOpen ? "250px" : "0px";
-    const [approvals, setApprovals] = useState([]);
+export default function HumanValidation() {
+    const [tab, setTab] = useState(0);
+    const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [alertMsg, setAlertMsg] = useState(null);
-    const [comment, setComment] = useState("");
+    const [actionLoading, setActionLoading] = useState(null);
+    const [comment, setComment] = useState({});
+    const [snack, setSnack] = useState({ open: false, msg: "" });
 
-    useEffect(() => {
-        getPendingApprovals().then(r => setApprovals(r.approvals || [])).catch(() => {}).finally(() => setLoading(false));
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const r = await getChangeReports();
+            setReports(r.reports || []);
+        } catch { setReports([]); }
+        setLoading(false);
     }, []);
 
+    useEffect(() => { load(); }, [load]);
+
     const handleApprove = async (id) => {
-        try { await approveRepair(id); setAlertMsg("Fix approved successfully!"); setApprovals(a => a.filter(x => x.id !== id)); } catch { setAlertMsg("Failed to approve"); }
+        setActionLoading(id);
+        try {
+            await approveChange(id);
+            setSnack({ open: true, msg: "Change approved" });
+            await load();
+        } catch { setSnack({ open: true, msg: "Failed to approve" }); }
+        setActionLoading(null);
     };
 
     const handleReject = async (id) => {
-        try { await rejectRepair(id); setAlertMsg("Fix rejected"); setApprovals(a => a.filter(x => x.id !== id)); } catch { setAlertMsg("Failed to reject"); }
+        setActionLoading(id);
+        try {
+            await rejectChange(id);
+            setSnack({ open: true, msg: "Change rejected" });
+            await load();
+        } catch { setSnack({ open: true, msg: "Failed to reject" }); }
+        setActionLoading(null);
     };
 
+    if (loading) return (
+        <Box sx={{ display: "flex", justifyContent: "center", pt: 16 }}>
+            <CircularProgress size={28} sx={{ color: "#6366f1" }} />
+        </Box>
+    );
+
+    const pending = reports.filter(r => r.status === "pending");
+    const approved = reports.filter(r => r.status === "approved");
+    const rejected = reports.filter(r => r.status === "rejected");
+
+    const filtered = tab === 0 ? pending : tab === 1 ? approved : tab === 2 ? rejected : reports;
+
+    const stats = [
+        { label: "Pending Review", value: pending.length, color: "#f59e0b", icon: <HourglassTopRoundedIcon sx={{ fontSize: 18 }} /> },
+        { label: "Approved", value: approved.length, color: "#10b981", icon: <CheckCircleRoundedIcon sx={{ fontSize: 18 }} /> },
+        { label: "Rejected", value: rejected.length, color: "#ef4444", icon: <CancelRoundedIcon sx={{ fontSize: 18 }} /> },
+        { label: "Total", value: reports.length, color: "#6366f1" },
+    ];
+
     return (
-        <Box sx={{ display: "flex", height: "100vh", overflowY: "auto", background: "#f8f9fb" }}>
-            <Sidebar />
-            <Box component="main" sx={{ flexGrow: 1, ml: sidebarMargin, p: 3, position: "relative", zIndex: 1 }}>
-                <Navbar subtitle="AI Fix > Human Validation" title="Human Validation" />
-
-                {alertMsg && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAlertMsg(null)}>{alertMsg}</Alert>}
-
-                {approvals.length > 0 && (
-                    <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 3, background: "rgba(234,88,12,0.06)", border: "1px solid rgba(234,88,12,0.15)", color: "#92400e" }}>
-                        <Typography sx={{ fontWeight: 700 }}>Human Review Required</Typography>
-                        {approvals.length} fix(es) require your approval before being applied.
-                    </Alert>
-                )}
-
-                {approvals.map((a, i) => (
-                    <Box key={a.id} sx={{ background: "#fff", borderRadius: 2.5, p: 3, border: "1px solid #e5e7eb", mb: 2 }}>
-                        {/* Header */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                <Chip label="POST" sx={{ fontSize: 10, height: 20, background: "rgba(26,115,232,0.1)", color: "#1a73e8", fontWeight: 700 }} />
-                                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#1a1f36" }}>{a.affected_file || "Unknown file"}</Typography>
-                            </Box>
-                            <Chip icon={<WarningAmberIcon />} label="HUMAN REVIEW REQUIRED"
-                                sx={{ background: "rgba(234,88,12,0.1)", color: "#ea580c", fontWeight: 700, height: 28 }} />
-                        </Box>
-
-                        <Typography sx={{ color: "#6b7280", fontSize: 13, mb: 2 }}>{a.reason || "AI generated fix requires human review."}</Typography>
-
-                        {/* Stats Row */}
-                        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mb: 3 }}>
-                            <Box sx={{ py: 1.5, px: 2, borderRadius: 2, background: "#f9fafb" }}>
-                                <Typography sx={{ color: "#6b7280", fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>Validation Status</Typography>
-                                <Typography sx={{ color: "#ea580c", fontSize: 14, fontWeight: 700, mt: 0.5 }}>⏳ Waiting for Review</Typography>
-                            </Box>
-                            <Box sx={{ py: 1.5, px: 2, borderRadius: 2, background: "#f9fafb" }}>
-                                <Typography sx={{ color: "#6b7280", fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>Change Summary</Typography>
-                                <Typography sx={{ color: "#1a1f36", fontSize: 13, mt: 0.5 }}>Breaking change detected</Typography>
-                                <Typography sx={{ color: "#6b7280", fontSize: 12 }}>1 line changed</Typography>
-                            </Box>
-                            <Box sx={{ py: 1.5, px: 2, borderRadius: 2, background: "#f9fafb" }}>
-                                <Typography sx={{ color: "#6b7280", fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>AI Recommendation</Typography>
-                                <Typography sx={{ color: "#0d9488", fontSize: 13, fontWeight: 700, mt: 0.5 }}>Apply the generated patch</Typography>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
-                                    <Typography sx={{ color: "#6b7280", fontSize: 11 }}>Confidence: 94%</Typography>
-                                    <Box sx={{ flex: 1, height: 4, borderRadius: 2, background: "#e5e7eb" }}><Box sx={{ width: "94%", height: "100%", borderRadius: 2, background: "#0d9488" }} /></Box>
-                                </Box>
-                            </Box>
-                            <Box sx={{ py: 1.5, px: 2, borderRadius: 2, background: "#f9fafb" }}>
-                                <Typography sx={{ color: "#6b7280", fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>Test Results</Typography>
-                                <Box sx={{ display: "flex", gap: 2, mt: 0.5 }}>
-                                    <Box><Typography sx={{ color: "#1a1f36", fontSize: 16, fontWeight: 800 }}>12</Typography><Typography sx={{ color: "#9ca3af", fontSize: 10 }}>Total</Typography></Box>
-                                    <Box><Typography sx={{ color: "#0d9488", fontSize: 16, fontWeight: 800 }}>12</Typography><Typography sx={{ color: "#9ca3af", fontSize: 10 }}>Passed</Typography></Box>
-                                    <Box><Typography sx={{ color: "#dc2626", fontSize: 16, fontWeight: 800 }}>0</Typography><Typography sx={{ color: "#9ca3af", fontSize: 10 }}>Failed</Typography></Box>
-                                </Box>
-                            </Box>
-                        </Box>
-
-                        {/* Code Review */}
-                        <Box sx={{ mb: 3 }}>
-                            <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1a1f36", mb: 1.5 }}>Code Review</Typography>
-                            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-                                <Box>
-                                    <Typography sx={{ color: "#dc2626", fontSize: 12, fontWeight: 700, mb: 0.5 }}>BEFORE</Typography>
-                                    <Box sx={{ background: "#0f172a", borderRadius: 2, p: 2 }}>
-                                        <pre style={{ color: "#94a3b8", fontSize: 12, margin: 0, fontFamily: "monospace", lineHeight: 1.8 }}>
-                                            {"1  const payment = {\n2    "}<span style={{ color: "#fca5a5", background: "rgba(239,68,68,0.2)", padding: "0 4px", borderRadius: 3 }}>{a.old_code || "amount: amount"}</span>{"\n3  };"}
-                                        </pre>
-                                    </Box>
-                                </Box>
-                                <Box>
-                                    <Typography sx={{ color: "#0d9488", fontSize: 12, fontWeight: 700, mb: 0.5 }}>AFTER</Typography>
-                                    <Box sx={{ background: "#0f172a", borderRadius: 2, p: 2 }}>
-                                        <pre style={{ color: "#94a3b8", fontSize: 12, margin: 0, fontFamily: "monospace", lineHeight: 1.8 }}>
-                                            {"1  const payment = {\n2    "}<span style={{ color: "#86efac", background: "rgba(34,197,94,0.2)", padding: "0 4px", borderRadius: 3 }}>{a.proposed_code || "total_amount: amount"}</span>{"\n3  };"}
-                                        </pre>
-                                    </Box>
-                                </Box>
-                            </Box>
-                            <Typography sx={{ color: "#9ca3af", fontSize: 12, mt: 1 }}>Changes in this file: 1 line | Total files: 1 | Total changes: 1 line</Typography>
-                        </Box>
-
-                        {/* Why + Decision + Progress */}
-                        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, mb: 3 }}>
-                            <Box sx={{ py: 2, px: 2.5, borderRadius: 2, background: "#fff", border: "1px solid #e5e7eb" }}>
-                                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1a1f36", mb: 1 }}>Why Human Review?</Typography>
-                                <Typography sx={{ color: "#6b7280", fontSize: 12, mb: 1 }}>NovaGrid requests human approval because:</Typography>
-                                {["This is a breaking API change", "1 file and 1 function are affected", "Request payload format is modified", "AI confidence is below threshold"].map((item, i) => (
-                                    <Typography key={i} sx={{ color: "#374151", fontSize: 12, py: 0.3 }}>• {item}</Typography>
-                                ))}
-                                <Box sx={{ mt: 1.5, py: 1, px: 1.5, borderRadius: 1.5, background: "rgba(234,88,12,0.06)", border: "1px solid rgba(234,88,12,0.15)" }}>
-                                    <Typography sx={{ color: "#92400e", fontSize: 11, fontWeight: 600 }}>Human decision is required to ensure safety.</Typography>
-                                </Box>
-                            </Box>
-                            <Box sx={{ py: 2, px: 2.5, borderRadius: 2, background: "#fff", border: "1px solid #e5e7eb" }}>
-                                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1a1f36", mb: 1 }}>Human Decision</Typography>
-                                <Typography sx={{ color: "#6b7280", fontSize: 12, mb: 1.5 }}>Is this fix correct and safe to apply?</Typography>
-                                <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
-                                    <Button variant="contained" startIcon={<CheckCircleIcon />} onClick={() => handleApprove(a.id)}
-                                        sx={{ background: "#0d9488", "&:hover": { background: "#0f766e" }, textTransform: "none", fontSize: 12 }}>Approve Fix</Button>
-                                    <Button variant="outlined" startIcon={<CancelIcon />} onClick={() => handleReject(a.id)}
-                                        sx={{ borderColor: "#dc2626", color: "#dc2626", textTransform: "none", fontSize: 12 }}>Reject</Button>
-                                    <Button variant="outlined" startIcon={<EditIcon />}
-                                        sx={{ textTransform: "none", fontSize: 12, color: "#6b7280" }}>Request Changes</Button>
-                                </Box>
-                                <Typography sx={{ color: "#6b7280", fontSize: 11, fontWeight: 600, mb: 0.5 }}>REVIEW COMMENT (optional)</Typography>
-                                <TextField fullWidth size="small" placeholder="Add your comments, notes or feedback..." value={comment} onChange={e => setComment(e.target.value)}
-                                    multiline rows={2} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 }, mb: 1 }} />
-                                <Button variant="contained" size="small" sx={{ textTransform: "none" }}>Submit Review</Button>
-                            </Box>
-                            <Box sx={{ py: 2, px: 2.5, borderRadius: 2, background: "#fff", border: "1px solid #e5e7eb" }}>
-                                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1a1f36", mb: 1 }}>Review Progress</Typography>
-                                {[{ l: "AI Analysis", s: "Completed" }, { l: "Impact Analysis", s: "Completed" }, { l: "AI Fix Generated", s: "Completed" }, { l: "Tests Executed", s: "12/12 Passed" }, { l: "Human Review", s: "Pending" }, { l: "Final Decision", s: "Pending" }].map((item, i) => (
-                                    <Box key={i} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.5 }}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                            {item.s === "Completed" || item.s.includes("Passed") ? (
-                                                <CheckCircleIcon sx={{ fontSize: 14, color: "#0d9488" }} />
-                                            ) : (
-                                                <Box sx={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #d1d5db" }} />
-                                            )}
-                                            <Typography sx={{ fontSize: 12, color: "#374151" }}>{item.l}</Typography>
-                                        </Box>
-                                        <Typography sx={{ fontSize: 11, color: item.s === "Pending" ? "#ea580c" : "#0d9488", fontWeight: 600 }}>{item.s}</Typography>
-                                    </Box>
-                                ))}
-                            </Box>
-                        </Box>
-                    </Box>
-                ))}
-
-                {!loading && approvals.length === 0 && (
-                    <Box sx={{ background: "#fff", borderRadius: 2.5, p: 6, border: "1px solid #e5e7eb", textAlign: "center" }}>
-                        <CheckCircleIcon sx={{ fontSize: 48, color: "#0d9488", mb: 2 }} />
-                        <Typography sx={{ color: "#1a1f36", fontSize: 18, fontWeight: 700, mb: 1 }}>All caught up!</Typography>
-                        <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>No pending approvals. All fixes have been reviewed.</Typography>
-                    </Box>
-                )}
+        <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+            <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: 22, color: "#0f172a" }}>Human Validation</Typography>
+                <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.3 }}>
+                    Review detected API changes — approve or reject before they are applied
+                </Typography>
             </Box>
+
+            {/* Stats */}
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 1.5, mb: 3 }}>
+                {stats.map((s) => (
+                    <Card key={s.label} sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                        <Box sx={{ width: 40, height: 40, borderRadius: 2, background: `${s.color}15`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color }}>
+                            {s.icon}
+                        </Box>
+                        <Box>
+                            <Typography sx={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1.1 }}>{s.value}</Typography>
+                            <Typography sx={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>{s.label}</Typography>
+                        </Box>
+                    </Card>
+                ))}
+            </Box>
+
+            {/* Tabs */}
+            <Tabs value={tab} onChange={(_, v) => setTab(v)}
+                sx={{ mb: 2, borderBottom: "1px solid #e2e8f0", "& .MuiTab-root": { textTransform: "none", fontWeight: 600, fontSize: 12, minHeight: 36 } }}>
+                <Tab label={`Pending (${pending.length})`} />
+                <Tab label={`Approved (${approved.length})`} />
+                <Tab label={`Rejected (${rejected.length})`} />
+                <Tab label={`All (${reports.length})`} />
+            </Tabs>
+
+            {/* Table */}
+            <Card sx={{ borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                <CardContent sx={{ p: 0 }}>
+                    {filtered.length === 0 ? (
+                        <Box sx={{ p: 6, textAlign: "center" }}>
+                            <CheckCircleRoundedIcon sx={{ fontSize: 40, color: "#e2e8f0", mb: 1 }} />
+                            <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                                {tab === 0 ? "No pending changes to review" : "No items in this category"}
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <TableContainer sx={{ maxHeight: 600 }}>
+                            <Table size="small" stickyHeader>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Status</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Severity</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Type</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Method</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Path</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Detail</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Date</TableCell>
+                                        {tab === 0 && <TableCell sx={{ fontWeight: 700, fontSize: 11, background: "#f8fafc" }}>Actions</TableCell>}
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {filtered.map((r) => (
+                                        <TableRow key={r.id} sx={{ "&:hover": { background: "#f8fafc" } }}>
+                                            <TableCell>
+                                                <Chip size="small" label={r.status}
+                                                    sx={{ fontSize: 9, height: 18, fontWeight: 600,
+                                                        background: r.status === "approved" ? "#ecfdf5" : r.status === "rejected" ? "#fef2f2" : "#fef3c7",
+                                                        color: r.status === "approved" ? "#059669" : r.status === "rejected" ? "#dc2626" : "#d97706" }} />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip size="small" label={r.severity || "low"}
+                                                    color={r.severity === "high" ? "error" : "warning"} sx={{ fontSize: 9, height: 18 }} />
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: 10, fontFamily: "monospace", color: "#64748b" }}>{r.change_type}</TableCell>
+                                            <TableCell>
+                                                <Chip size="small" label={r.method || "\u2014"} sx={{ fontSize: 9, height: 18, background: "#f1f5f9" }} />
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: 11, fontFamily: "monospace" }}>{r.path || "\u2014"}</TableCell>
+                                            <TableCell sx={{ fontSize: 11, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.detail}</TableCell>
+                                            <TableCell sx={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap" }}>
+                                                {r.created_at ? new Date(r.created_at).toLocaleString() : "\u2014"}
+                                            </TableCell>
+                                            {tab === 0 && (
+                                                <TableCell>
+                                                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                                                        <Button size="small" onClick={() => handleApprove(r.id)} disabled={actionLoading === r.id}
+                                                            sx={{ fontSize: 10, textTransform: "none", color: "#10b981", fontWeight: 700, minWidth: 0, px: 1 }}>
+                                                            {actionLoading === r.id ? "..." : "Approve"}
+                                                        </Button>
+                                                        <Button size="small" onClick={() => handleReject(r.id)} disabled={actionLoading === r.id}
+                                                            sx={{ fontSize: 10, textTransform: "none", color: "#ef4444", fontWeight: 700, minWidth: 0, px: 1 }}>
+                                                            Reject
+                                                        </Button>
+                                                    </Box>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* How it works */}
+            <Card sx={{ mt: 3, borderRadius: 2, border: "1px solid #e2e8f0" }}>
+                <CardContent>
+                    <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#0f172a", mb: 1.5 }}>How Human Validation Works</Typography>
+                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(4, 1fr)" }, gap: 2 }}>
+                        {[
+                            { step: "1", title: "Detect", desc: "NovaGrid detects a change by comparing API specs", color: "#6366f1" },
+                            { step: "2", title: "Classify", desc: "Change is classified as Breaking, Safe, or Warning", color: "#f59e0b" },
+                            { step: "3", title: "Review", desc: "You review the change here and decide", color: "#10b981" },
+                            { step: "4", title: "Act", desc: "Approve to acknowledge or Reject to flag for fix", color: "#ef4444" },
+                        ].map((s) => (
+                            <Box key={s.step} sx={{ textAlign: "center" }}>
+                                <Box sx={{ width: 32, height: 32, borderRadius: "50%", background: `${s.color}15`, color: s.color, display: "inline-flex", alignItems: "center", justifyContent: "center", mb: 1, fontWeight: 800, fontSize: 14 }}>{s.step}</Box>
+                                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#0f172a", mb: 0.3 }}>{s.title}</Typography>
+                                <Typography sx={{ fontSize: 11, color: "#94a3b8" }}>{s.desc}</Typography>
+                            </Box>
+                        ))}
+                    </Box>
+                </CardContent>
+            </Card>
+
+            <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack({ ...snack, open: false })} message={snack.msg} />
         </Box>
     );
 }
-export default HumanValidation;

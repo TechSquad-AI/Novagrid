@@ -1,52 +1,84 @@
 import React, { useState } from "react";
-import { Box, Typography, TextField, Button, Alert } from "@mui/material";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { Box, Typography, TextField, Button, Alert, CircularProgress } from "@mui/material";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
+import { signup } from "../api/services";
 
-function Signup() {
-    const { signUp } = useAuth();
+export default function Signup() {
     const navigate = useNavigate();
+    const { saveUser } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const handleSignup = async () => {
-        if (password !== confirm) { setError("Passwords don't match"); return; }
-        setLoading(true); setError("");
-        try { await signUp(email, password); navigate("/dashboard"); }
-        catch (e) { setError(e.message || "Signup failed"); }
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        if (password !== confirm) { setError("Passwords do not match"); return; }
+        if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
+        setLoading(true);
+        try {
+            const r = await signup(email, password);
+            if (r.status === "success") { saveUser(r.user); navigate("/tree"); }
+            else setError(r.detail || "Signup failed");
+        } catch (err) {
+            setError(err.response?.data?.detail || "Signup failed");
+        }
         setLoading(false);
     };
 
     return (
-        <Box sx={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box sx={{
+            minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg, #0B1437 0%, #1a1145 100%)", p: 2,
+        }}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                <Box sx={{ background: "#fff", borderRadius: 3, p: 4, width: 420, border: "1px solid #e5e7eb", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+                <Box sx={{
+                    width: 380, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(20px)",
+                    border: "1px solid rgba(255,255,255,0.06)", borderRadius: 3, p: 4,
+                }}>
                     <Box sx={{ textAlign: "center", mb: 3 }}>
-                        <Box sx={{ width: 48, height: 48, borderRadius: 2.5, background: "linear-gradient(135deg, #1a73e8, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 1.5 }}>
-                            <Box sx={{ width: 24, height: 24, borderRadius: 1, border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />
-                            </Box>
+                        <Box sx={{
+                            width: 40, height: 40, borderRadius: 2, mx: "auto", mb: 1.5,
+                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            <Typography sx={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>N</Typography>
                         </Box>
-                        <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#1a1f36" }}>Create Account</Typography>
-                        <Typography sx={{ color: "#6b7280", fontSize: 14 }}>Join NovaGrid API Guardian</Typography>
+                        <Typography sx={{ fontWeight: 800, fontSize: 18, color: "#fff" }}>NovaGrid</Typography>
+                        <Typography sx={{ color: "rgba(255,255,255,0.35)", fontSize: 12, mt: 0.3 }}>Create account</Typography>
                     </Box>
-                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-                    <TextField fullWidth label="Email" value={email} onChange={e => setEmail(e.target.value)} size="small" sx={{ mb: 2 }} />
-                    <TextField fullWidth label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} size="small" sx={{ mb: 2 }} />
-                    <TextField fullWidth label="Confirm Password" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} size="small" sx={{ mb: 2.5 }} />
-                    <Button fullWidth variant="contained" onClick={handleSignup} disabled={loading} sx={{ py: 1.2, fontSize: 14, fontWeight: 700 }}>
-                        {loading ? "Creating account..." : "Sign Up"}
-                    </Button>
-                    <Typography sx={{ textAlign: "center", mt: 2, color: "#6b7280", fontSize: 13 }}>
-                        Already have an account? <Button size="small" onClick={() => navigate("/login")} sx={{ textTransform: "none", color: "#1a73e8", fontWeight: 600 }}>Sign In</Button>
+
+                    {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5, fontSize: 12 }}>{error}</Alert>}
+
+                    <form onSubmit={handleSubmit}>
+                        <TextField fullWidth label="Email" type="email" value={email}
+                            onChange={(e) => setEmail(e.target.value)} required size="small"
+                            sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                        <TextField fullWidth label="Password" type="password" value={password}
+                            onChange={(e) => setPassword(e.target.value)} required size="small"
+                            sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                        <TextField fullWidth label="Confirm Password" type="password" value={confirm}
+                            onChange={(e) => setConfirm(e.target.value)} required size="small"
+                            sx={{ mb: 2.5, "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                        <Button fullWidth type="submit" variant="contained" disabled={loading}
+                            sx={{
+                                py: 1.2, borderRadius: 1.5, fontWeight: 700, fontSize: 13,
+                                background: "#6366f1", "&:hover": { background: "#4f46e5" },
+                            }}>
+                            {loading ? <CircularProgress size={18} color="inherit" /> : "Create Account"}
+                        </Button>
+                    </form>
+
+                    <Typography sx={{ textAlign: "center", mt: 2.5, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
+                        Already have an account?{" "}
+                        <Link to="/login" style={{ color: "#8b5cf6", textDecoration: "none", fontWeight: 600 }}>Sign In</Link>
                     </Typography>
                 </Box>
             </motion.div>
         </Box>
     );
 }
-export default Signup;
