@@ -8,7 +8,7 @@ import HubRoundedIcon from "@mui/icons-material/HubRounded";
 import DifferenceRoundedIcon from "@mui/icons-material/DifferenceRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import { getChangeReports } from "../api/services";
+import { getChangeReports, listPublicAPIs } from "../api/services";
 
 const MC = { GET: "#10b981", POST: "#6366f1", PUT: "#f59e0b", PATCH: "#f59e0b", DELETE: "#ef4444" };
 
@@ -16,13 +16,15 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [reports, setReports] = useState(null);
+    const [apiCount, setApiCount] = useState(0);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         (async () => {
             try {
-                const r = await getChangeReports();
-                setReports(r);
+                const [r, apis] = await Promise.allSettled([getChangeReports(), listPublicAPIs()]);
+                if (r.status === "fulfilled") setReports(r.value);
+                if (apis.status === "fulfilled") setApiCount((apis.value?.apis || []).length);
             } catch { setError("Failed to load dashboard"); }
             setLoading(false);
         })();
@@ -38,7 +40,7 @@ export default function Dashboard() {
     const pendingCount = Array.isArray(pending) ? pending.length : 0;
 
     const kpis = [
-        { label: "Monitored APIs", value: 1, color: "#10b981" },
+        { label: "Monitored APIs", value: apiCount, color: "#10b981" },
         { label: "Changes Detected", value: pendingCount, color: pendingCount > 0 ? "#ef4444" : "#10b981" },
         { label: "Pending Review", value: pendingCount, color: pendingCount > 0 ? "#f59e0b" : "#10b981" },
     ];

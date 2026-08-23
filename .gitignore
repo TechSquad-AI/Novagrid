@@ -1,4 +1,35 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Environment files
 .env
-*.env
-.env
-*.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Freebuff internal
+.freebuff/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Supabase
+.supabase/

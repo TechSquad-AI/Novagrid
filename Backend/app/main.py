@@ -9,7 +9,6 @@ import os
 
 from app.api.endpoint_tree import router as tree_router
 from app.api.public_apis import router as public_apis_router
-from app.api.github_repos import router as github_repos_router
 
 
 # ============================================================
@@ -48,7 +47,6 @@ app.add_middleware(
 
 app.include_router(tree_router)
 app.include_router(public_apis_router)
-app.include_router(github_repos_router)
 
 
 # ============================================================

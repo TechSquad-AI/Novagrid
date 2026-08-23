@@ -22,7 +22,7 @@ export default function Signup() {
         setLoading(true);
         try {
             const r = await signup(email, password);
-            if (r.status === "success") { saveUser(r.user); navigate("/tree"); }
+            if (r.status === "success") { saveUser(r.user); navigate("/dashboard"); }
             else setError(r.detail || "Signup failed");
         } catch (err) {
             setError(err.response?.data?.detail || "Signup failed");

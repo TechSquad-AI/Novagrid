@@ -64,18 +64,4 @@ CREATE INDEX IF NOT EXISTS idx_tracked_apis_name ON tracked_apis(name);
 CREATE INDEX IF NOT EXISTS idx_public_changes_api ON public_api_changes(api_id);
 CREATE INDEX IF NOT EXISTS idx_public_changes_created ON public_api_changes(created_at DESC);
 
--- 5. Monitored GitHub Repos
-CREATE TABLE IF NOT EXISTS github_repos (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    repo_url TEXT NOT NULL,
-    branch TEXT DEFAULT 'main',
-    manifest JSONB DEFAULT '{}'::jsonb,
-    total_endpoints INTEGER DEFAULT 0,
-    methods_summary JSONB DEFAULT '{}'::jsonb,
-    status TEXT DEFAULT 'active',
-    last_checked TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
-CREATE INDEX IF NOT EXISTS idx_github_repos_name ON github_repos(name);
