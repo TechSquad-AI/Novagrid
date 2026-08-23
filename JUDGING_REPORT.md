@@ -64,23 +64,23 @@ flowchart LR
 ## Judge Metrics
 
 | Metric | Assessment |
-|--------|------------|
-| Core workflow | |
-| Implementation confidence | |
-| Technical ambition | /5 |
-| Architecture quality | /5 |
-| Engineering quality | /5 |
-| Demo risk | |
+|--------|-------------|
+| Core workflow |  |
+| Implementation confidence |  |
+| Technical ambition |  |
+| Architecture quality |  |
+| Engineering quality |  |
+| Demo risk |  |
 
 ---
 
 ## IKIGAI Score
 
 | Criterion | Weight | Score |
-|-----------|--------|-------|
-| Innovation & Creativity | 25 | |
-| Technical Implementation | 30 | |
-| Problem Solving | 20 | |
-| UI/UX & Presentation | 10 | |
-| Impact & Scalability | 15 | |
-| **Total** | **100** | |
+|-----------|---------|-------|
+| Innovation & Creativity | 25 |  |
+| Technical Implementation | 30 |  |
+| Problem Solving | 20 |  |
+| UI/UX & Presentation | 10 |  |
+| Impact & Scalability | 15 |  |
+| **Total** | **100** |  |
