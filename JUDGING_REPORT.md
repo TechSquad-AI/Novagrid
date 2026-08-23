@@ -61,6 +61,20 @@ flowchart LR
 
 ---
 
+## Track-Specific Checks (Open Innovation)
+
+**Core technical challenge:** Building a reliable API change detection system that can classify breaking vs safe changes without AI, using only structured OpenAPI spec comparison.
+
+| Check | Assessment |
+|-------|------------|
+| Relationship between technology and problem | Direct — the diff engine solves silent API breakage by detecting changes before production code fails |
+| Data sources | OpenAPI/Swagger JSON specs fetched from public URLs |
+| Realistic deployment assumptions | Requires APIs to publish OpenAPI specs (most major APIs do) |
+| Accessibility in intended environment | Web-based — accessible from any browser; no special hardware needed |
+| Domain relevance | API governance is a cross-cutting concern for any software team using third-party services |
+
+---
+
 ## Technical Review
 
 **Does the core solution exist?** Yes. The repository implements a working API change detection system with an OpenAPI diff engine, tree visualization, and human validation workflow.
