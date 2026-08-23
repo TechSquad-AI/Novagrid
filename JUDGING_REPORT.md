@@ -96,8 +96,8 @@ flowchart LR
 
 ## Questions for the Team
 
-1. `compare_specs()` in `openapi_parser.py` does shallow field-level comparison but does not recursively diff nested response schemas — how would you detect a type change inside a deeply nested response object like `data.items[].properties.status`?
-2. The `check_for_changes` endpoint in `public_apis.py` fetches the live OpenAPI spec synchronously on every request — what happens when the upstream URL is rate-limited, returns a 429, or is unreachable, and how would you handle retry/backoff?
-3. `approve_change()` in `endpoint_tree.py` only updates the status field to "approved" in the database — what downstream action (patch generation, notification, CI trigger) should actually follow an approval, and how would you implement it?
-4. The AST scanner in `route_scanner.py` only parses FastAPI decorator patterns — how would you extend it to detect Express.js routes, Spring Boot annotations, or other framework patterns to support polyglot codebases?
-5. The diff engine compares stored specs against the latest fetch, but does not version or snapshot the intermediate states — how would you implement a full change history with rollback capability if a bad change is deployed?
+1. `_extract_body_fields()` in `openapi_parser.py` only reads top-level `properties` from the request body schema — how would a nested field type change (e.g., `address.zip` changing from `string` to `integer`) be detected, and would your current `compare_specs()` catch it?
+2. `check_for_changes()` in `public_apis.py` calls `fetch_spec()` with a 15-second timeout and no retry logic — if the upstream OpenAPI URL returns a 429 or 503, the check silently fails. How would you handle rate-limiting and transient failures?
+3. `approve_change()` in `endpoint_tree.py` only updates the `status` field to `approved` and sends a webhook — there is no actual code patch, CI trigger, or deployment step after approval. What should happen after a human approves a breaking change?
+4. `scan_file()` in `route_scanner.py` uses `ast.walk()` to find FastAPI decorators, but `_extract_endpoint_from_decorator()` only handles `@app.get("/path")` patterns — how would it handle dynamic route registration like `app.add_api_route()` or middleware-wrapped routers?
+5. The tree graph in `TreeGraph.jsx` uses a fixed `EP_NODE_W = 200` constant for all endpoint cards — when an API has deep paths like `/v1/organizations/{org_id}/members/{member_id}/permissions`, the text truncates at 16 characters. How would you handle deep path hierarchies without breaking the layout?
