@@ -265,13 +265,18 @@ export default function PublicAPIs() {
                     <TextField fullWidth label="OpenAPI URL *" value={form.openapi_url}
                         onChange={(e) => setForm({ ...form, openapi_url: e.target.value })}
                         placeholder="e.g., https://petstore.swagger.io/v2/swagger.json"
-                        size="small" helperText="JSON or YAML file describing all API endpoints" sx={{ mb: 1 }} />
+                        size="small" helperText="JSON or YAML file describing all API endpoints" sx={{ mb: 1 }}
+                        InputProps={{ sx: { fontSize: 11, fontFamily: 'monospace' } }} />
                     <Box sx={{ mt: 1.5, p: 1.5, background: "#f1f5f9", borderRadius: 1.5 }}>
-                        <Typography sx={{ fontSize: 10, fontWeight: 600, color: "#64748b", mb: 0.5, textTransform: "uppercase", letterSpacing: 0.3 }}>Quick start</Typography>
-                        <Box sx={{ display: "flex", gap: 0.5 }}>
+                        <Typography sx={{ fontSize: 10, fontWeight: 600, color: "#64748b", mb: 0.5, textTransform: "uppercase", letterSpacing: 0.3 }}>Quick start — click to fill</Typography>
+                        <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                             {[
                                 { n: "Petstore", u: "https://petstore.swagger.io/v2", s: "https://petstore.swagger.io/v2/swagger.json" },
                                 { n: "httpbin", u: "https://httpbin.org", s: "https://httpbin.org/spec.json" },
+                                { n: "Petstore v3", u: "https://petstore3.swagger.io", s: "https://petstore3.swagger.io/api/v3/openapi.json" },
+                                { n: "Stripe", u: "https://api.stripe.com", s: "https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json" },
+                                { n: "Ably", u: "https://realtime.ably.io", s: "https://api.apis.guru/v2/specs/ably.io/platform/1.1.0/openapi.json" },
+                                { n: "Adafruit", u: "https://io.adafruit.com", s: "https://api.apis.guru/v2/specs/adafruit.com/2.0.0/swagger.json" },
                             ].map((d) => (
                                 <Chip key={d.n} label={d.n} size="small" clickable
                                     onClick={() => setForm({ name: d.n, url: d.u, openapi_url: d.s })}
