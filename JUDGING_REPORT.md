@@ -1,4 +1,4 @@
-# IKIGAI Judging Brief — NovaGrid API Guardian
+# NovaGrid API Guardian
 
 **Track:** Open Innovation — Non-CS branches
 **Problem:** Detect API changes in third-party services before they break production code, using structured OpenAPI spec comparison instead of AI.
