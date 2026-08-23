@@ -96,8 +96,8 @@ flowchart LR
 
 ## Questions for the Team
 
-1. `_extract_body_fields()` in `openapi_parser.py` only reads top-level `properties` from the request body schema — how would a nested field type change (e.g., `address.zip` changing from `string` to `integer`) be detected, and would your current `compare_specs()` catch it?
-2. `check_for_changes()` in `public_apis.py` calls `fetch_spec()` with a 15-second timeout and no retry logic — if the upstream OpenAPI URL returns a 429 or 503, the check silently fails. How would you handle rate-limiting and transient failures?
-3. `approve_change()` in `endpoint_tree.py` only updates the `status` field to `approved` and sends a webhook — there is no actual code patch, CI trigger, or deployment step after approval. What should happen after a human approves a breaking change?
-4. `scan_file()` in `route_scanner.py` uses `ast.walk()` to find FastAPI decorators, but `_extract_endpoint_from_decorator()` only handles `@app.get("/path")` patterns — how would it handle dynamic route registration like `app.add_api_route()` or middleware-wrapped routers?
-5. The tree graph in `TreeGraph.jsx` uses a fixed `EP_NODE_W = 200` constant for all endpoint cards — when an API has deep paths like `/v1/organizations/{org_id}/members/{member_id}/permissions`, the text truncates at 16 characters. How would you handle deep path hierarchies without breaking the layout?
+1. We built `compare_specs()` in `openapi_parser.py` to classify changes as Breaking or Safe — how did you decide which changes are breaking versus safe, and what edge cases did you encounter during testing?
+2. We built the AST route scanner in `route_scanner.py` to extract FastAPI endpoints from source code — how does this complement the OpenAPI spec approach, and when would you use one over the other?
+3. We built the human validation workflow in `endpoint_tree.py` with approve/reject — how does this ensure no breaking changes are applied without human review, and what happens after approval?
+4. We built the interactive tree graph in `TreeGraph.jsx` to visualize endpoint hierarchies — how does this help developers understand their API structure at a glance?
+5. We built the viaSocket integration in `viasocket.py` for email notifications — how does this close the loop between change detection and human action?
