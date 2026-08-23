@@ -6,7 +6,7 @@
 
 ---
 
-## What They Built
+## What We Built
 
 - Web app that monitors public APIs by registering OpenAPI spec URLs and auto-discovering endpoints
 - Structural diff engine comparing old vs new specs field-by-field (Breaking vs Safe classification)
