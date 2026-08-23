@@ -63,16 +63,4 @@ flowchart LR
 
 ---
 
----
 
-## Ask the Team
-
-1. The diff engine in `openapi_parser.py:compare_specs()` compares endpoint-level changes but does not recursively compare response schemas — how would you handle a nested field type change inside a response object?
-
-2. The tree graph layout in `TreeGraph.jsx` uses a fixed-width card approach — what happens when an API has 200+ endpoints across many tags, and how would you handle horizontal overflow?
-
-3. The `check_for_changes` endpoint in `public_apis.py` fetches the spec on every request — have you considered caching or rate-limiting to avoid hitting the OpenAPI URL too frequently?
-
-4. The human validation page shows approve/reject buttons but the backend `approve_change()` only updates a status field — what happens after approval? Is there any downstream action?
-
-5. You chose Supabase for both auth and database — what happens if the Supabase service goes down? Is there any fallback or retry mechanism?
