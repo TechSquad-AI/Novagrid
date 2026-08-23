@@ -61,27 +61,7 @@ flowchart LR
 
 ---
 
-## Judge Metrics
-
-| Metric | Assessment |
-|--------|------------|
-| Technical Ambition | 3/5 |
-| Architecture | 4/5 |
-| Engineering | 3/5 |
-| Demo Risk | Low |
-
 ---
-
-## IKIGAI Score
-
-| Criterion | Score | Justification |
-|-----------|-------|---------------|
-| Innovation & Creativity | 18/25 | Novel approach to API governance using structured diff instead of AI; practical problem, clear solution |
-| Technical Implementation | 22/30 | Working diff engine, tree visualization, and notification pipeline; missing deep schema comparison |
-| Problem Solving | 16/20 | Directly solves a real problem (silent API breakage); human-in-the-loop is a good design choice |
-| UI/UX & Presentation | 7/10 | Clean Material UI, interactive tree graph, but some pages could be more polished |
-| Impact & Scalability | 11/15 | Useful for any team using third-party APIs; Supabase + Railway deployment is scalable |
-| **Total** | **74/100** | |
 
 ---
 
