@@ -61,6 +61,20 @@ flowchart LR
 
 ---
 
+## Technical Review
+
+**Does the core solution exist?** Yes. The repository implements a working API change detection system with an OpenAPI diff engine, tree visualization, and human validation workflow.
+
+**Is it end-to-end?** Yes. The flow is complete: register API → fetch spec → parse endpoints → store in DB → compare with stored version → detect changes → send notification → review in UI → approve/reject.
+
+**Is the architecture sensible?** Yes. Clean separation: React frontend → FastAPI backend → Supabase database. The diff engine is isolated in `openapi_parser.py`, the route scanner in `route_scanner.py`, and notifications in `viasocket.py`. No unnecessary complexity.
+
+**Are the technologies appropriate?** Yes. FastAPI for the backend is lightweight and fast. Supabase handles auth + database without self-hosting. React + MUI for the frontend is standard. viaSocket for webhooks is a simple HTTP POST — no heavy dependencies.
+
+**What is technically interesting?** The structural diff engine (`compare_specs()`) classifies API changes as Breaking or Safe using pure JSON comparison without AI — handling endpoint additions/removals, field type changes, path parameter removals, and deprecation flags. The AST-based route scanner (`route_scanner.py`) parses Python source code to extract FastAPI endpoint metadata without requiring an OpenAPI spec.
+
+---
+
 ## Judge Metrics
 
 | Metric | Assessment |
