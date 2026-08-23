@@ -33,29 +33,27 @@ flowchart LR
 
 ---
 
-## Core Capability Check
+## Repository Assessment
 
 | Capability | Status | Evidence |
 |------------|--------|----------|
-| API Registration & Discovery | ✅ Verified | `Backend/app/api/public_apis.py` |
-| OpenAPI Diff Engine | ✅ Verified | `Backend/app/openapi_parser.py` |
-| Tree Graph Visualization | ✅ Verified | `Frontend/src/components/TreeGraph.jsx` |
-| Human Validation | ✅ Verified | `Backend/app/api/endpoint_tree.py` |
-| Email Notifications | ✅ Verified | `Backend/app/viasocket.py` |
-| AST Route Scanner | ✅ Verified | `Backend/app/route_scanner.py` |
-| Auth (Login/Signup) | ✅ Verified | `Backend/app/main.py` |
+| API Registration & Discovery | ✅ Verified | `public_apis.py` — fetches and parses OpenAPI specs |
+| OpenAPI Diff Engine | ✅ Verified | `openapi_parser.py` — field-by-field structural comparison |
+| Tree Graph Visualization | ✅ Verified | `TreeGraph.jsx` — SVG layout with router cards |
+| Human Validation | ✅ Verified | `endpoint_tree.py` — approve/reject with status tracking |
+| Email Notifications | ✅ Verified | `viasocket.py` — webhook POST integration |
+| AST Route Scanner | ✅ Verified | `route_scanner.py` — Python AST-based extraction |
+| Auth (Login/Signup) | ✅ Verified | `main.py` — Supabase auth integration |
 
 ---
 
 ## Technical Review
 
-**Strongest aspect:** Diff engine handles endpoint add/remove, field type changes, param removal, and deprecation — all without AI, using pure JSON comparison.
-
-**Biggest concern:** Does not deep-compare nested response schemas — a field type change inside a response object would be missed.
-
-**Core workflow:** Complete — Register → Fetch → Parse → Store → Compare → Detect → Alert → Review → Approve/Reject
-
-**Implementation confidence:** High — demonstrable with Petstore or httpbin out of the box.
+- Does the core solution exist? ✅ Working API change detection with diff engine, tree visualization, and human validation.
+- Is it end-to-end? ✅ Register → Fetch → Parse → Store → Compare → Detect → Alert → Review → Approve/Reject.
+- Is the architecture sensible? ✅ Clean separation: React → FastAPI → Supabase. No unnecessary complexity.
+- Are the technologies appropriate? ✅ FastAPI, Supabase, React+MUI, viaSocket — all lightweight and fit for purpose.
+- What is technically interesting? Structural diff engine classifies Breaking vs Safe without AI using pure JSON comparison.
 
 ---
 
