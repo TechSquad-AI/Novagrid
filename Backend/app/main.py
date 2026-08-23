@@ -17,24 +17,10 @@ from app.api.public_apis import router as public_apis_router
 
 app = FastAPI(title="NovaGrid API", version="2.0")
 
-# CORS
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    "http://localhost:5177",
-    "http://127.0.0.1:5176",
-    "https://localhost:5173",
-]
-if FRONTEND_URL:
-    ALLOWED_ORIGINS.insert(0, FRONTEND_URL)
-
+# CORS — allow all origins for deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
