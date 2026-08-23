@@ -4,8 +4,6 @@
 **Problem:** Detect API changes in third-party services before they break production code, using structured OpenAPI spec comparison instead of AI.
 **Repository assessment:** Working end-to-end system with frontend, backend, database, and external notification integration.
 
----
-
 ## What They Built
 
 - Web app that monitors public APIs by registering OpenAPI spec URLs and auto-discovering endpoints
@@ -14,8 +12,6 @@
 - Human validation workflow — changes require explicit approval before action
 - viaSocket email alerts + Google Sheets logging on change detection
 - AST-based route scanner extracting FastAPI endpoint metadata from Python source
-
----
 
 ## Architecture
 
@@ -31,8 +27,6 @@ flowchart LR
     viaSocket --> GoogleSheets[Google Sheets Log]
 ```
 
----
-
 ## Core Capability Check
 
 | Capability | Status | Evidence |
@@ -45,8 +39,6 @@ flowchart LR
 | AST Route Scanner | ✅ Verified | `Backend/app/route_scanner.py` |
 | Auth (Login/Signup) | ✅ Verified | `Backend/app/main.py` |
 
----
-
 ## Technical Review
 
 **Strongest aspect:** Diff engine handles endpoint add/remove, field type changes, param removal, and deprecation — all without AI, using pure JSON comparison.
@@ -56,8 +48,6 @@ flowchart LR
 **Core workflow:** Complete — Register → Fetch → Parse → Store → Compare → Detect → Alert → Review → Approve/Reject
 
 **Implementation confidence:** High — demonstrable with Petstore or httpbin out of the box.
-
----
 
 ## Track-Specific Checks (Open Innovation)
 
