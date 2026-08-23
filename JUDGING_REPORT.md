@@ -68,14 +68,6 @@ flowchart LR
 
 ---
 
-## Questions for the Team
-
-1. The diff engine in `openapi_parser.py:compare_specs()` compares endpoint-level changes but does not recursively compare response schemas — how would you handle a nested field type change inside a response object?
-2. The `check_for_changes` endpoint fetches the live spec on every request — what happens if the OpenAPI URL is rate-limited or goes down during a check?
-3. The human validation page shows approve/reject buttons but the backend `approve_change()` only updates a status field — what downstream action happens after approval?
-
----
-
 ## Judge Metrics
 
 | Metric | Assessment |
@@ -99,3 +91,13 @@ flowchart LR
 | UI/UX & Presentation | 10 |  |
 | Impact & Scalability | 15 |  |
 | **Total** | **100** |  |
+
+---
+
+## Questions for the Team
+
+1. `compare_specs()` in `openapi_parser.py` does shallow field-level comparison but does not recursively diff nested response schemas — how would you detect a type change inside a deeply nested response object like `data.items[].properties.status`?
+2. The `check_for_changes` endpoint in `public_apis.py` fetches the live OpenAPI spec synchronously on every request — what happens when the upstream URL is rate-limited, returns a 429, or is unreachable, and how would you handle retry/backoff?
+3. `approve_change()` in `endpoint_tree.py` only updates the status field to "approved" in the database — what downstream action (patch generation, notification, CI trigger) should actually follow an approval, and how would you implement it?
+4. The AST scanner in `route_scanner.py` only parses FastAPI decorator patterns — how would you extend it to detect Express.js routes, Spring Boot annotations, or other framework patterns to support polyglot codebases?
+5. The diff engine compares stored specs against the latest fetch, but does not version or snapshot the intermediate states — how would you implement a full change history with rollback capability if a bad change is deployed?
